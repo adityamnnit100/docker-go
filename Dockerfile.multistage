@@ -1,0 +1,38 @@
+# Stage 1: BUild
+FROM golang:1.21 AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+
+# Stage 2: Run
+FROM alpine:latest
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Install Redis if want to run redis in same application container
+# RUN apk add --no-cache redis
+
+WORKDIR /app
+
+# Copy the compiled binary from the builder stage
+COPY --from=builder /app/main .
+
+USER appuser
+
+# Expose Redis port
+# EXPOSE 6379
+
+EXPOSE 8090
+
+# Start Redis and the application
+# CMD ["sh", "-c", "redis-server --daemonize yes && ./main"]
+
+CMD ["./main"]
+
